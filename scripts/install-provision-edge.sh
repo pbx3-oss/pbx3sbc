@@ -25,6 +25,10 @@ CA_DST="$CONF_DST/vendor-client-cas.pem"
 PROVISION_FQDN="${PROVISION_FQDN:-provision.pbx3.com}"
 SSL_CERT="${SSL_CERT:-/etc/letsencrypt/live/${PROVISION_FQDN}/fullchain.pem}"
 SSL_KEY="${SSL_KEY:-/etc/letsencrypt/live/${PROVISION_FQDN}/privkey.pem}"
+# Optional RSA dual-cert for Poly/legacy desks (ECDSA-only LE breaks Handshake Failure).
+# Default: sibling lineage ${PROVISION_FQDN}-rsa when present.
+SSL_CERT_RSA="${SSL_CERT_RSA:-/etc/letsencrypt/live/${PROVISION_FQDN}-rsa/fullchain.pem}"
+SSL_KEY_RSA="${SSL_KEY_RSA:-/etc/letsencrypt/live/${PROVISION_FQDN}-rsa/privkey.pem}"
 VENDOR_CLIENT_CA_BUNDLE="${VENDOR_CLIENT_CA_BUNDLE:-}"
 PROVISION_MTLS="${PROVISION_MTLS:-}"
 
@@ -101,14 +105,32 @@ include $CONF_DST/mac-from-request.map;
 include $CONF_DST/provision-mac.map;
 EOF
 
-# Substitute placeholders; splice mTLS block at marker
+RSA_BLOCK_FILE="$(mktemp)"
+if [ -f "$SSL_CERT_RSA" ] && [ -f "$SSL_KEY_RSA" ]; then
+	{
+		echo "    # Dual-cert RSA lineage (Poly/legacy — ECDSA-only ClientHello → Handshake Failure)"
+		echo "    ssl_certificate     ${SSL_CERT_RSA};"
+		echo "    ssl_certificate_key ${SSL_KEY_RSA};"
+	} > "$RSA_BLOCK_FILE"
+	log "RSA dual-cert enabled: $SSL_CERT_RSA"
+else
+	: > "$RSA_BLOCK_FILE"
+	log "RSA dual-cert skipped (no $SSL_CERT_RSA) — issue: certbot certonly --webroot -w … -d $PROVISION_FQDN --cert-name ${PROVISION_FQDN}-rsa --key-type rsa"
+fi
+
+# Substitute placeholders; splice RSA + mTLS blocks at markers
 TMP_SITE="$(mktemp)"
 sed -e "s|__PROVISION_SERVER_NAME__|${PROVISION_FQDN}|g" \
 	-e "s|__SSL_CERTIFICATE__|${SSL_CERT}|g" \
 	-e "s|__SSL_CERTIFICATE_KEY__|${SSL_KEY}|g" \
 	"$CONF_SRC/pbx3-provision-edge.conf" > "$TMP_SITE"
 
-awk -v mtlsfile="$MTLS_FILE" '
+awk -v mtlsfile="$MTLS_FILE" -v rsafile="$RSA_BLOCK_FILE" '
+	$0 == "__SSL_RSA_CERTIFICATE_BLOCK__" {
+		while ((getline line < rsafile) > 0) print line
+		close(rsafile)
+		next
+	}
 	$0 == "__MTLS_BLOCK__" {
 		while ((getline line < mtlsfile) > 0) print line
 		close(mtlsfile)
@@ -116,7 +138,7 @@ awk -v mtlsfile="$MTLS_FILE" '
 	}
 	{ print }
 ' "$TMP_SITE" > "$AVAILABLE"
-rm -f "$TMP_SITE"
+rm -f "$TMP_SITE" "$RSA_BLOCK_FILE"
 
 ln -sfn "$AVAILABLE" "$ENABLED"
 

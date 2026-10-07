@@ -1,6 +1,7 @@
 # Fleet edge provision proxy (C2 + C5)
 
 **Status:** **C2+C5 lab green** on SBC (2026-10-02). Live: `PROVISION_MTLS=optional` + Snom/Yealink CA PEM.  
+**2026-10-03:** **RSA dual-cert** on `:41363` — ECDSA-only LE cert caused Poly **Handshake Failure** (ClientHello with no ECDSA suites).  
 **Spec:** `pbx3/workingdocs/PROVISIONING_SERVER_REQUIREMENTS.md` §0.3 / §6 / §8 / #3 / #11 · plan **C2/C5**.  
 **Depends:** Gatekeeper **C3** MAC index + `catalog/provision-mac.map`.
 
@@ -23,15 +24,24 @@ Phone → https://provision.{apex}:41363/provisioning/{mac}.cfg
 
 1. DNS: `provision.{apex}` A/AAAA → **edge VIP** (same VIP family as SIP).
 2. LE cert for `provision.{apex}` (port **41363** is not 443 — use `certbot certonly --webroot` or DNS-01; reuse admin webroot on :80 if convenient, then point ssl paths at the new name).
-3. Open **UFW 41363/tcp** phone-facing on the edge (this is the public provision port). Homes stay **SBC-only** on 41363.
-4. Install vhost (C2 only):
+3. **RSA dual-cert (required for Poly / some legacy desks):** Certbot defaults to **ECDSA**. Phones that only offer RSA suites get nginx **Fatal Handshake Failure** before HTTP. Issue a sibling RSA lineage and reinstall:
+
+```bash
+# Same webroot as the ECDSA cert (example):
+sudo certbot certonly --webroot -w /home/ubuntu/pbx3sbc-admin/public \
+  -d provision.pbx3.com --cert-name provision.pbx3.com-rsa --key-type rsa --rsa-key-size 2048
+# install-provision-edge.sh auto-binds /etc/letsencrypt/live/${FQDN}-rsa when present
+```
+
+4. Open **UFW 41363/tcp** phone-facing on the edge (this is the public provision port). Homes stay **SBC-only** on 41363.
+5. Install vhost (C2 only):
 
 ```bash
 cd ~/pbx3sbc   # or deploy path
 sudo PROVISION_FQDN=provision.pbx3.com ./scripts/install-provision-edge.sh
 ```
 
-5. **C5 mTLS** (Snom + Yealink lab prove) — copy ops CA PEM then reinstall:
+6. **C5 mTLS** (Snom + Yealink lab prove) — copy ops CA PEM then reinstall:
 
 ```bash
 # On operator Mac (ops repo): build Snom+Yealink-only PEM from local inventory pack
@@ -52,7 +62,7 @@ sudo VENDOR_CLIENT_CA_BUNDLE=/path/to/vendor-client-cas-snom-yealink.pem \
 | `optional` | `optional` | **Lab default when CA present** — verify if phone presents cert; allow curl / manual-URL brands without cert |
 | `require` | `on` | Hardened public edge — TLS fails without trusted client cert |
 
-6. **MAC map sync (automatic):** enable the 1-minute systemd timer (also invoked from `install-provision-edge.sh` when `/etc/pbx3sbc/log-ship.env` has `PBX3_ORG_BUCKET`):
+7. **MAC map sync (automatic):** enable the 1-minute systemd timer (also invoked from `install-provision-edge.sh` when `/etc/pbx3sbc/log-ship.env` has `PBX3_ORG_BUCKET`):
 
 ```bash
 sudo ./scripts/install-provision-mac-map-sync-timer.sh
@@ -68,7 +78,7 @@ sudo ./scripts/sync-provision-mac-map.sh
 
 Tip-hot push (Gatekeeper → SBC API on claim) is a later polish — not required when the timer is running.
 
-7. Prove:
+8. Prove:
 
 ```bash
 # known MAC in index → 200 from home via edge (path or ?mac=)
