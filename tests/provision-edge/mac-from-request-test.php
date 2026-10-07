@@ -15,7 +15,9 @@ function extract_mac(string $uri, string $argMac = ''): string
             $raw = '';
         } elseif (preg_match('#_Security\.enc$#i', $uri) || preg_match('#\.boot$#i', $uri)) {
             $raw = '';
-        } elseif (preg_match('#/([0-9A-Fa-f]{12})\.cfg$#', $uri, $m)) {
+        } elseif (preg_match('#/cfg([0-9A-Fa-f]{12})\.xml$#i', $uri, $m)) {
+            $raw = $m[1];
+        } elseif (preg_match('#/([0-9A-Fa-f]{12})(?:-[A-Za-z0-9._]+)?\.(?:cfg|xml)$#i', $uri, $m)) {
             $raw = $m[1];
         } elseif (preg_match('#/([0-9A-Fa-f]{12})/?$#', $uri, $m)) {
             $raw = $m[1];
@@ -31,6 +33,9 @@ function extract_mac(string $uri, string $argMac = ''): string
 $cases = [
     ['/provisioning/aabbccddeeff.cfg', '', 'aabbccddeeff'],
     ['/provisioning/AABBCCDDEEFF.cfg', '', 'AABBCCDDEEFF'],
+    ['/provisioning/aabbccddeeff-reg.cfg', '', 'aabbccddeeff'],
+    ['/provisioning/aabbccddeeff-directory.xml', '', 'aabbccddeeff'],
+    ['/provisioning/cfgaabbccddeeff.xml', '', 'aabbccddeeff'],
     ['/provisioning/foo.cfg', 'aabbccddeeff', 'aabbccddeeff'],
     ['/provisioning/y000000000028.cfg', '', ''],
     ['/provisioning/x_Security.enc', '', ''],

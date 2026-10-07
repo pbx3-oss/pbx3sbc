@@ -15,8 +15,11 @@ map $uri $provision_mac_from_uri {
     # Ignore list
     "~*_Security\.enc$" "";
     "~*\.boot$" "";
-    # Path …/{mac}.cfg or …/{mac}
-    "~*/([0-9A-Fa-f]{12})\.cfg$" $1;
+    # Grandstream cfg{mac}.xml (prefix before MAC)
+    "~*/cfg([0-9A-Fa-f]{12})\.xml$" $1;
+    # Path …/{mac}.cfg, …/{mac}-reg.cfg, …/{mac}-directory.xml, etc. (Poly CONFIG_FILES)
+    "~*/([0-9A-Fa-f]{12})(?:-[A-Za-z0-9._]+)?\.(?:cfg|xml)$" $1;
+    # Bare …/{mac}
     "~*/([0-9A-Fa-f]{12})/?$" $1;
 }
 

@@ -9,12 +9,14 @@
 
 ```text
 Phone → https://provision.{apex}:41363/provisioning/{mac}.cfg
+     or https://provision.{apex}:41363/provisioning/{mac}-reg.cfg   (Poly CONFIG_FILES)
      or https://provision.{apex}:41363/provisioning?mac={mac}   (Snom)
   → nginx [optional mTLS] → MAC extract → local provision-mac.map → http://{home}:41363
 ```
 
 - Edge terminates **HTTPS**; **no** 3xx to home (topology hiding).
 - **#11:** no routable MAC / Yealink `y000000*` / ignore list / bare `/provisioning` → **404**.
+- **MAC extract:** `{mac}.cfg` **and** `{mac}-*.cfg` / `{mac}-*.xml` (Poly `-reg.cfg` etc.) — bare `{mac}.cfg`-only extract 404’d Poly settings (**lab 2026-10-03**).
 - **#3:** map is a **static file** on the SBC; GET never calls gatekeeper/S3.
 - **C5:** vendor client-cert verify against ops-held CA PEM (Snom + Yealink near-term).
 
