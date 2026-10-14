@@ -116,6 +116,10 @@ Live: `/etc/nginx/pbx3-provision/` (`provision-mac.map`, `vendor-client-cas.pem`
 - **C5 (2026-10-02):** Yealink T31P **402** (`249ad89b435b`) — `$ssl_client_verify=SUCCESS`, **200** on `.cfg`. Bare curl under `optional` → **NONE**/200; under `require` → **400**. Snom D717 **401** reboot GET **200** (UA present). Left on **`optional`**.
 - **MAC map timer (2026-10-03):** `pbx3-provision-mac-map-sync.timer` every **1 min** — SPA claim no longer needs manual SBC sync.
 
+## Provision access / IP allowlist (C10)
+
+Optional Filament lockdown for **`:41363`** (sibling to Management access). Design: **`../pbx3-directory/docs/SBC_PROVISION_ACCESS_REQUIREMENTS.md`** (path from monorepo: `pbx3/pbx3-directory/docs/…`). Default off; complements mTLS.
+
 ## Related
 
 - Home listener: `pbx3` `install-provision-listener.sh` (fleet HTTP).
