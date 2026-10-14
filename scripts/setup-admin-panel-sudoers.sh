@@ -41,6 +41,23 @@ else
     fi
 fi
 
+BLACKLIST_SYNC_SCRIPT_PATH=""
+if [[ -f "/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-blacklist.sh" ]]; then
+    BLACKLIST_SYNC_SCRIPT_PATH="/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-blacklist.sh"
+elif [[ -f "/opt/pbx3sbc/scripts/sync-fail2ban-blacklist.sh" ]]; then
+    BLACKLIST_SYNC_SCRIPT_PATH="/opt/pbx3sbc/scripts/sync-fail2ban-blacklist.sh"
+elif [[ -f "/usr/local/pbx3sbc/scripts/sync-fail2ban-blacklist.sh" ]]; then
+    BLACKLIST_SYNC_SCRIPT_PATH="/usr/local/pbx3sbc/scripts/sync-fail2ban-blacklist.sh"
+elif [[ -f "$(dirname "$0")/sync-fail2ban-blacklist.sh" ]]; then
+    BLACKLIST_SYNC_SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/sync-fail2ban-blacklist.sh"
+else
+    BLACKLIST_SYNC_SCRIPT_PATH=$(find /home /opt /usr/local -name "sync-fail2ban-blacklist.sh" 2>/dev/null | head -1 || true)
+    if [[ -z "$BLACKLIST_SYNC_SCRIPT_PATH" ]]; then
+        echo -e "${YELLOW}Warning: Could not find sync-fail2ban-blacklist.sh${NC}"
+        BLACKLIST_SYNC_SCRIPT_PATH="/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-blacklist.sh"
+    fi
+fi
+
 TAIL_LOG_SCRIPT_PATH=""
 if [[ -f "/home/ubuntu/pbx3sbc/scripts/tail-fail2ban-log.sh" ]]; then
     TAIL_LOG_SCRIPT_PATH="/home/ubuntu/pbx3sbc/scripts/tail-fail2ban-log.sh"
@@ -122,6 +139,9 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/fail2ban-client set opensips-brute-force u
 
 # Whitelist sync script (with environment variable preservation)
 www-data ALL=(ALL) NOPASSWD: $SYNC_SCRIPT_PATH
+
+# Permanent blacklist sync (iptables PBX3SBC-BLACKLIST)
+www-data ALL=(ALL) NOPASSWD: $BLACKLIST_SYNC_SCRIPT_PATH
 
 # Fail2ban log viewer (capped tail)
 www-data ALL=(ALL) NOPASSWD: $TAIL_LOG_SCRIPT_PATH

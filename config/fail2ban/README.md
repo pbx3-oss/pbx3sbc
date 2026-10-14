@@ -263,7 +263,7 @@ sudo tail -f /var/log/opensips/opensips.log
 ### Manual IP Management
 
 ```bash
-# Ban an IP manually
+# Ban an IP manually (short-term jail)
 sudo fail2ban-client set opensips-brute-force banip 192.168.1.100
 
 # Unban an IP
@@ -272,6 +272,20 @@ sudo fail2ban-client set opensips-brute-force unbanip 192.168.1.100
 # Unban all IPs
 sudo fail2ban-client set opensips-brute-force unban --all
 ```
+
+### Permanent blacklist (iptables DROP)
+
+Short-term Fail2ban bans expire with `bantime`. Persistent scanners belong on the **permanent blacklist** (admin panel → Fail2Ban → Permanent blacklist), synced to iptables chain `PBX3SBC-BLACKLIST` (DROP all from listed IPs/CIDRs).
+
+```bash
+# Sync DB → iptables (also run from admin panel Sync)
+sudo ./scripts/sync-fail2ban-blacklist.sh   # needs DB_NAME/DB_USER/DB_PASS or args
+
+# Inspect
+sudo iptables -nL PBX3SBC-BLACKLIST --line-numbers
+```
+
+Auto-promote: after a lifetime temp-ban count reaches the threshold (default 10; 0 = off), cron `pbx3sbc:ops-fail2ban-bans` inserts a blacklist row and syncs. Spec: `pbx3sbc-admin/workingdocs/FAIL2BAN_PERMANENT_BLACKLIST_REQUIREMENTS.md`.
 
 ## Troubleshooting
 
