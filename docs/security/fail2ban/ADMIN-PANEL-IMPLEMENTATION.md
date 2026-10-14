@@ -337,32 +337,15 @@ php artisan migrate
 
 **See:** `REMOTE-MANAGEMENT-OPTIONS.md` for detailed implementation plan
 
-### ⏸️ Permanent Blacklist Management
+### ✅ Permanent Blacklist Management (2026-10-14)
 
-**Status:** Table created, functionality pending
+**Status:** Implemented — see `pbx3sbc-admin/workingdocs/FAIL2BAN_PERMANENT_BLACKLIST_REQUIREMENTS.md`
 
-**What's Needed:**
-- `BlacklistSyncService` - Sync database blacklist to firewall rules (iptables/ufw)
-- `sync-fail2ban-blacklist.sh` - Script to sync blacklist to permanent firewall rules
-- `Fail2banBlacklistResource` - Filament resource for managing permanent bans
-- Integration with firewall management (iptables/ufw commands)
-
-**Use Cases:**
-- Known bad actors that should never be allowed
-- IPs that repeatedly violate after temporary bans expire
-- Pre-emptive blocking of known malicious IPs
-- Compliance/legal requirements for permanent bans
-
-**Implementation Approach:**
-- Database-backed blacklist (similar to whitelist)
-- Sync script adds permanent iptables/ufw rules
-- Survives Fail2Ban restarts (truly permanent)
-- Admin-controlled permanent ban decisions
-
-**Files Needed:**
-- `app/Services/BlacklistSyncService.php`
-- `scripts/sync-fail2ban-blacklist.sh`
-- `app/Filament/Resources/Fail2banBlacklistResource.php`
+**Shipped:**
+- `BlacklistSyncService` + `scripts/sync-fail2ban-blacklist.sh` → iptables chain `PBX3SBC-BLACKLIST` DROP
+- `Fail2banBlacklistResource` (Permanent blacklist) + auto-promote threshold UI
+- Status: **Ban permanently** + Manual Ban “also permanent”
+- `pbx3sbc:ops-fail2ban-bans` lifetime `fail2ban_ban_stats` + auto-promote (threshold default 10; 0 = off)
 
 ---
 
